@@ -9,4 +9,17 @@ export default class Objects {
 			if (obj.hasOwnProperty(key)) predicate(obj[key], key)
 		}
 	}
+
+	static filter(obj, predicate) {
+		if (!obj) return
+		if (typeof predicate !== 'function') throw new Error('Lapse:Utils:Objects:filter: predicate is ' + predicate)
+		let ret = {}
+		for (let key in obj) {
+			if (obj.hasOwnProperty(key) && predicate(obj[key], key)) ret[key] = obj[key]
+		}
+		return ret
+	}
+
+	static without$(obj) { return Objects.filter(obj, (value, key) => key.charAt(0) !== '$') }
+	static with$(obj) { return Objects.filter(obj, (value, key) => key.charAt(0) === '$') }
 }

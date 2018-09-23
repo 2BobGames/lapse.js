@@ -1,12 +1,13 @@
 import _ from 'utils/Objects'
 import Core from 'core'
+import Eases from './eases'
 
 /**
  * The tween class for applying animations to objects.
  *
  * ```
  * let sprite = new PIXI.Sprite(texture)
- * let tween = new Lapse.Tween(sprite, { x:100, y: 200, alpha: 0 }, { duration: 1500, onComplete: () => console.log('done') })
+ * let tween = new Lapse.Tween(sprite, { x:100, y: 200, alpha: 0 }, { time: 1500, onComplete: () => console.log('done') })
  * ```
  * @class
  * @memberof Lapse
@@ -18,36 +19,37 @@ export default class Tween {
 	get progress() { return this._progress }
 
 	/**
-	 * @param {object} target - An object whose properties a tween will animate
-	 * @param {object} vars - Properties that a tween will change (for example { x: 50 }, )
-	 * @param {object} options - Special options for a tween for an advanced functionality
-	 * @param {number} [options.duration] - Duration of animation in milliseconds
-	 * @param {number} [options.onUpdate] - Is called each time when the tween applies changes to the target. The tween will be passed in parameters
-	 * @param {number} [options.onComplete] - Is called when the tween is completed his animation from the start to the end The tween will be passed in parameters
+	 * @param {object} params - Any kind of properties of a tween. Properties of library have $ char at the beginning, any another ones are properties that will be animated (for example { x: 50, $time: 500 })
+	 * @param {number} params.$time - Duration of animation (delay, interval etc.) in milliseconds
+	 * @param {number} [params.$target] - The object whose parameters we're going to animate
+	 * @param {Function|string} [params.$ease] - Ease function or name of ease function (e.g. "linear" or "power1In" or "backOut")
+	 * @param {number} [params.$onUpdate] - Is called each time when the tween applies changes to the target. The tween will be passed in parameters
+	 * @param {number} [params.$onComplete] - Is called when the tween is completed his animation from the start to the end The tween will be passed in parameters
 	 */
-	constructor(target, vars, options) {
+	constructor(params) {
 		this._reset(... arguments)
-		console.log(this)
 	}
 
 	/**
 	 * Clears and initializes again the tween with a new specified data
 	*/
-	_reset(target, vars, options) {
-		if (!target) throw new Error('LapseJS:Tween: target "' + target + '" is wrong')
-		if (!vars) throw new Error('LapseJS:Tween: vars "' + target + '" is wrong. You have to pass at least one property to animate')
-		if (!options || !options.duration) throw new Error('LapseJS:Tween: options "' + options + '" is wrong. You have to pass at least { \'duration\': milliseconds } to animate')
+	_reset(params) {
+		if (!params || params.hasOwnProperty('$time') !== true) throw new Error('LapseJS:Tween: params are wrong. You have to pass at least { \'$time\': milliseconds } as a duration')
 
-		if (!options.ease) options.ease = progress => progress
+		if (typeof params.$ease === 'string') {
+			params.$ease = Eases[params.$ease]
+			if (!params.$ease) throw new Error('LapseJS:Tween: params are wrong. You have to pass at least { \'$time\': milliseconds } as a duration')
+		}
+		if (!params.$ease) params.$ease = Eases.linear
 
 		this._clear()
-		this._target = target
-		this._varsTarget = vars
-		this._options = options
+		this._params = params
+		this._varsTarget = _.without$(params)
 
 		//remembers "initial values" and calculates "values difference" of the target's properties
 		_.each(this._varsTarget, (value, key) => {
-			this._varsInit[key] = this._target[key]
+			if (!this._params.$target) throw new Error('LapseJS:Tween: property $target is wrong. You passed properties to animate but didn\'t pass any target')
+			this._varsInit[key] = this._params.$target[key]
 			this._varsDifference[key] = value - this._varsInit[key]
 		})
 	}
@@ -56,6 +58,8 @@ export default class Tween {
 	_clear() {
 		this.stop()
 
+		/** Here we store only those properties (and their target values) that this tween is going to animate */
+		this._varsTarget = {}
 		/** Initial values of the target's properties */
 		this._varsInit = {}
 		/** Difference between target values and initial ones */
@@ -77,16 +81,19 @@ export default class Tween {
 	_apply(progress) {
 		if (progress > 1) progress = 1
 		this._progress = progress
-		this._ratio = this._options.ease(progress)
+		if (!this._params.$target) return
+
+		let target = this._params.$target
+		this._ratio = this._params.$ease(progress)
 
 		//applying new values to target
-		_.each(this._varsDifference, (value, key) => this._target[key] = this._varsInit[key] + value * this._ratio )
+		_.each(this._varsDifference, (value, key) => target[key] = this._varsInit[key] + value * this._ratio)
 
-		//if the tween is playing and we got ratio = 1 it means that the tween` completed
+		//if the tween is playing and we got ratio = 1 it means that the tween is completed
 		if (this._isPlaying === true) {
-			if (this._options.onUpdate) this._options.onUpdate(this)
+			if (this._params.$onUpdate) this._params.$onUpdate()
 			if (this._progress >= 1) {
-				if (this._options.onComplete) this._options.onComplete(this)
+				if (this._params.$onComplete) this._params.$onComplete()
 				this._isFinished = true
 				this.stop()
 			}
@@ -98,7 +105,7 @@ export default class Tween {
 	*/
 	_tick() {
 		if (this._isPlaying !== true) return
-		this._apply(this._progress + Core.ticker.elapsedMS / this._options.duration)
+		this._apply(this._progress + Core.ticker.elapsedMS / this._params.$time)
 	}
 
 	/**
