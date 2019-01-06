@@ -44,7 +44,7 @@ export default class Tween {
 
 		this._clear()
 		this._params = params
-		this._varsTarget = _.without$(params)
+		this._varsTarget = _.withoutSame(_.without$(params), this._params.$target)
 
 		//remembers "initial values" and calculates "values difference" of the target's properties
 		_.each(this._varsTarget, (value, key) => {

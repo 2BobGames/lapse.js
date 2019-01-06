@@ -20,6 +20,7 @@ export default class Objects {
 		return ret
 	}
 
+	static withoutSame(objNeededToBeFiltered, comparingObj) { return Objects.filter(objNeededToBeFiltered, (value, key) => comparingObj[key] !== value) }
 	static without$(obj) { return Objects.filter(obj, (value, key) => key.charAt(0) !== '$') }
 	static with$(obj) { return Objects.filter(obj, (value, key) => key.charAt(0) === '$') }
 }
