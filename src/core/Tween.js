@@ -1,6 +1,6 @@
 import _ from 'utils/Objects'
 import Core from 'core'
-import Eases from './eases'
+import Eases from './Eases'
 
 /**
  * The tween class for applying animations to objects.
@@ -115,10 +115,12 @@ export default class Tween {
 	play(ratio) {
 		if (!ratio) ratio = 0
 		if (this._isPlaying === true) return
-		this._isPlaying = true
 		this._isFinished = false
 		this._apply(0)
 		Core.ticker.add(this._tick, this)
+
+		//we set isPlaying true exactly here in order to start animating from the next frame but not immediately
+		this._isPlaying = true
 	}
 
 	/** Starts playing the tween from that moment when it was stopped by stop() method */

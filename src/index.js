@@ -1,5 +1,11 @@
 import Polyfills from 'polyfills'
 
-export Tween from 'core/Tween'
+import Tween from 'core/Tween'
 
-global.Lapse = exports
+global.Lapse = {
+	one(params) {
+		let tween = new Tween(params)
+		tween.play()
+		return tween
+	}
+}

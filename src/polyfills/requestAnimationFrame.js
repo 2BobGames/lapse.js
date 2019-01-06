@@ -1,3 +1,5 @@
+/*
+
 // References:
 // http://paulirish.com/2011/requestanimationframe-for-smart-animating/
 // https://gist.github.com/1579671
@@ -76,3 +78,5 @@ if (!global.cancelAnimationFrame)
 {
     global.cancelAnimationFrame = (id) => clearTimeout(id);
 }
+
+*/
