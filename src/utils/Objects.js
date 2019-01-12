@@ -5,8 +5,22 @@ export default class Objects {
 	static each(obj, predicate) {
 		if (!obj) return
 		if (typeof predicate !== 'function') throw new Error('Lapse:Utils:Objects:each: predicate is ' + predicate)
-		for (let key in obj) {
-			if (obj.hasOwnProperty(key)) predicate(obj[key], key)
+
+		let key
+		if (Array.isArray(obj)) {
+			key = 0
+			let len = obj.length, shift
+			while (key < len) {
+				predicate(obj[key], key)
+				shift = len - obj.length
+				key -= shift
+				len -= shift
+				key++
+			}
+		} else {
+			for (key in obj) {
+				if (obj.hasOwnProperty(key)) predicate(obj[key], key)
+			}
 		}
 	}
 

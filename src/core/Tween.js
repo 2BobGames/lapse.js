@@ -28,6 +28,7 @@ export default class Tween {
 	 */
 	constructor(params) {
 		this._reset(... arguments)
+		Core.onTweenCreated(this)
 	}
 
 	/**
@@ -43,10 +44,18 @@ export default class Tween {
 		if (!params.$ease) params.$ease = Eases.linear
 
 		this._clear()
+
+		if (params.$group) {
+			this._groupSymbol = params.$group
+			Core.groups.addTo(this._groupSymbol, this)
+		}
+
 		this._params = params
 		this._varsTarget = _.withoutSame(_.without$(params), this._params.$target)
 
 		//remembers "initial values" and calculates "values difference" of the target's properties
+		this._varsInit = {}
+		this._varsDifference = {}
 		_.each(this._varsTarget, (value, key) => {
 			if (!this._params.$target) throw new Error('LapseJS:Tween: property $target is wrong. You passed properties to animate but didn\'t pass any target')
 			this._varsInit[key] = this._params.$target[key]
@@ -58,12 +67,17 @@ export default class Tween {
 	_clear() {
 		this.stop()
 
+		if (this._groupSymbol) Core.groups.removeFrom(this._groupSymbol, this)
+
+		this._groupSymbol = null
+		/** Original params that were passed to this tween last time */
+		this._params = null
 		/** Here we store only those properties (and their target values) that this tween is going to animate */
-		this._varsTarget = {}
+		this._varsTarget = null
 		/** Initial values of the target's properties */
-		this._varsInit = {}
+		this._varsInit = null
 		/** Difference between target values and initial ones */
-		this._varsDifference = {}
+		this._varsDifference = null
 		/** Current tween animation ratio from 0 to 1 (it's not the progress, because ratio is already modified by ease-function number) */
 		this._ratio = 0
 		/** Current tween animation progress from 0 to 1 */
@@ -91,9 +105,9 @@ export default class Tween {
 
 		//if the tween is playing and we got ratio = 1 it means that the tween is completed
 		if (this._isPlaying === true) {
-			if (this._params.$onUpdate) this._params.$onUpdate()
+			if (this._params.$onUpdate) this._params.$onUpdate(this)
 			if (this._progress >= 1) {
-				if (this._params.$onComplete) this._params.$onComplete()
+				if (this._params.$onComplete) this._params.$onComplete(this)
 				this._isFinished = true
 				this.stop()
 			}
@@ -112,29 +126,36 @@ export default class Tween {
 	 * Plays the animation for the target from the start or from a specified ratio (from 0 to 1)
 	 * @param {number} [ratio=0] - A ratio (number from 0 to 1) from which to start playing the tween
 	 */
-	play(ratio) {
-		if (!ratio) ratio = 0
+	play(progress) {
+		if (!progress) progress = 0
 		if (this._isPlaying === true) return
 		this._isFinished = false
-		this._apply(0)
+		this._apply(progress)
 		Core.ticker.add(this._tick, this)
 
 		//we set isPlaying true exactly here in order to start animating from the next frame but not immediately
 		this._isPlaying = true
 	}
 
+	pause() {
+		this.stop()
+	}
+
 	/** Starts playing the tween from that moment when it was stopped by stop() method */
 	resume() {
-		this.play(this._ratio)
+		this.play(this._progress)
 	}
 
 	/** Stops the animation. Can be resumed (played from that moment when we stop it) with resume() method */
 	stop() {
-		Core.ticker.remove(this._tick)
+		Core.ticker.remove(this._tick, this)
 		this._isPlaying = false
 	}
 
 	destroy() {
-		this.stop()
+		if (this.isDestroyed === true) return
+		this._clear()
+		this.isDestroyed = true
+		Core.onTweenDestroyed(this)
 	}
 }
